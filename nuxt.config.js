@@ -12,15 +12,8 @@ module.exports = {
     },
     meta: [
       { name: 'msapplication-TileColor', content: '#2b5797' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { name: 'apple-mobile-web-app-capable', content: 'yes' },
-      { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
-      { name: 'apple-mobile-web-app-title', content: 'FucerNet' },
     ],
     link: [
-      { rel: 'apple-touch-icon', sizes: '180x180', href: '/favicons/apple-touch-icon.png' },
-      { rel: 'mask-icon', href: '/favicons/safari-pinned-tab.svg', color: '#5bbad5' },
-      { rel: 'icon', type: 'image/x-icon', href: '/favicons/favicon.ico' },
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css?family=Lato:400,700,900&display=swap' },
     ]
   },
@@ -67,6 +60,7 @@ module.exports = {
         ],
         'connect-src': [
           "'self'",
+          'https://*.ingest.sentry.io',
           'https://events.mercadopago.com',
           'https://api.mercadopago.com',
           'https://content.mercadopago.com',
@@ -94,76 +88,75 @@ module.exports = {
     }
   },
 
-  // https://pwa.nuxtjs.org/modules/manifest.html
-  manifest: {
-    "name": "FucerNet",
-    "short_name": "FucerNet",
-    "description": "Consulte el  contenido de la  normativa aplicable a la  registración de automotores",
-    "display": "standalone",
-    "theme_color": "#204A42",
-    "lang": "es"
-  },
-
-  // https://pwa.nuxtjs.org/modules/meta.html
-  meta: {
-    theme_color: '#204A42',
-    lang: 'es'
-  },
-
-  // https://pwa.nuxtjs.org/modules/workbox.html
-  workbox: {
-    // dev: true,
-    pagesURLPattern: '/|offline',
-    runtimeCaching: [
-      {
-        urlPattern: '^https:\/\/fucer\.com\.ar\/app\/api\/.*',
-        handler: 'networkFirst',
-        strategyOptions: {
-          cacheName: 'api-cache',
-          networkTimeoutSeconds: 4,
-          cacheExpiration: {
-            maxEntries: 250,
-            maxAgeSeconds: 60 * 60 * 24 * 30,
-          },
-          cacheableResponse: { statuses: [0, 200] }
-        }
-      },{
-        urlPattern: '^https:\/\/(www\.)?fucer\.com\.ar\/app\/cms\/.*',
-        handler: 'cacheFirst',
-        strategyOptions: {
-          cacheName: 'cms-cache',
-          cacheExpiration: {
-            maxEntries: 50,
-            maxAgeSeconds: 60 * 60 * 24 * 10,
-            purgeOnQuotaError: true,
-          },
-          cacheableResponse: { statuses: [0, 200] }
-        }
-      },{
-        urlPattern: '^https:\/\/fonts\.googleapis\.com',
-        handler: 'staleWhileRevalidate',
-        strategyOptions: {
-          cacheName: 'google-fonts-stylesheets',
-        }
-      },{
-        urlPattern: '^https:\/\/fonts\.gstatic\.com',
-        handler: 'cacheFirst',
-        strategyOptions: {
-          cacheName: 'google-fonts-webfonts',
-          cacheExpiration: {
-            maxEntries: 30,
-            maxAgeSeconds: 60 * 60 * 24 * 365,
-          },
-          cacheableResponse: { statuses: [0, 200] }
-        }
-      },
-    ],
-    routingExtensions: '@/plugins/workbox-routing-extension.js',
+  pwa: {
+    // https://pwa.nuxtjs.org/modules/manifest.html
+    manifest: {
+      theme_color: "#204A42",
+      lang: "es"
+    },
+  
+    // https://pwa.nuxtjs.org/modules/meta.html
+    meta: {
+      theme_color: '#204A42',
+      lang: 'es'
+    },
+  
+    // https://pwa.nuxtjs.org/modules/icon.html
+    icons: {},
+  
+    // https://pwa.nuxtjs.org/modules/workbox.html
+    workbox: {
+      pagesURLPattern: '/|offline',
+      runtimeCaching: [{
+          urlPattern: '^\/api\/.*',
+          handler: 'networkFirst',
+          strategyOptions: {
+            cacheName: 'fucer-api',
+            networkTimeoutSeconds: 4,
+            cacheExpiration: {
+              maxEntries: 250,
+              maxAgeSeconds: 60 * 60 * 24 * 30,
+            },
+            cacheableResponse: { statuses: [0, 200] }
+          }
+        },{
+          urlPattern: '^https:\/\/((www\.)?fucer\.com\.ar\/app|net\.fucer\.com\.ar)\/cms\/.*',
+          handler: 'cacheFirst',
+          strategyOptions: {
+            cacheName: 'fucer-cms',
+            cacheExpiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 60 * 24 * 10,
+              purgeOnQuotaError: true,
+            },
+            cacheableResponse: { statuses: [0, 200] }
+          }
+        },{
+          urlPattern: '^https:\/\/fonts\.googleapis\.com',
+          handler: 'staleWhileRevalidate',
+          strategyOptions: {
+            cacheName: 'google-fonts-stylesheets',
+          }
+        },{
+          urlPattern: '^https:\/\/fonts\.gstatic\.com',
+          handler: 'cacheFirst',
+          strategyOptions: {
+            cacheName: 'google-fonts-webfonts',
+            cacheExpiration: {
+              maxEntries: 30,
+              maxAgeSeconds: 60 * 60 * 24 * 365,
+            },
+            cacheableResponse: { statuses: [0, 200] }
+          }
+        },
+      ],
+      routingExtensions: '@/plugins/workbox-routing-extension.js',
+    },
   },
 
   router: {
     base: '/',
-    mode: 'hash',
+    mode: 'history',
     middleware: ['sesiones-simultaneas','auth'],
     extendRoutes (routes, resolve) {
       routes.splice(0, routes.length,
@@ -195,9 +188,14 @@ module.exports = {
     }
   },
 
+  buildModules: [
+    '~/modules/pwa-extension.js',
+    '@nuxtjs/pwa',
+  ],
+
   modules: [
-    '@nuxtjs/axios',
     '@nuxtjs/auth',
+    '@nuxtjs/axios',
     '@nuxtjs/toast',
   ],
 
@@ -211,6 +209,7 @@ module.exports = {
   },
 
   auth: {
+    plugins: ['~/plugins/auth.js'],
     strategies: {
       local: {
         endpoints: {
@@ -219,14 +218,14 @@ module.exports = {
           user: { url: '/auth/user', method: 'get', propertyName: 'user' },
           refreshToken: { url: '/auth/refresh-token', method: 'get', propertyName: 'token' }
         },
-        redirect: {
-          login: '/login',
-          logout: '/',
-          callback: '/login',
-          user: '/'
-        },
         refresh_token_key: 'refresh_token'
       }
+    },
+    redirect: {
+      login: '/login',
+      logout: '/',
+      callback: '/login',
+      home: '/inicio'
     },
     cookie: {
       options: {
